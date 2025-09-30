@@ -9,7 +9,7 @@ After k time intervals, it then runs the speciesnet model then saves the output 
 # Image capturing section
 from time import sleep
 import os
-from utils.camera_img import capture_image
+from utils.camera_img import capture_image, capture_video
 from datetime import datetime
 from utils.run_model import run_speciesnet
 
@@ -20,27 +20,35 @@ def sleep_interval(seconds):
     print(f"Slept for {seconds} seconds")
 
 
-k_interval = 10
+k_interval = 100
 
 # Main Loop
-def main():
+def main(method="image"):
     count = 0
 
     while True:
         # Get today's date to create a folder for today's images
         todays_date = datetime.now().strftime("%Y-%m-%d")
 
-        # Check if today's folder exists, if not create it
+        # Check if today's folder exists, if not create it for image captures
         if not os.path.exists(f'deploy-test-data/{todays_date}'):
             os.makedirs(f'deploy-test-data/{todays_date}', exist_ok=True)
+        
+        if method == "image":
+            # Capture the image
+            image_file = capture_image(todays_date)
+            count += 1
+        elif method == "video":
+            # Capture the video
+            video_file = capture_video(todays_date, fmt='mp4', duration=30)
+            count += 1
+        else:
+            raise ValueError("Method must be either 'image' or 'video'")
+        
 
-        # Start to capture the image
-        image_file = capture_image(todays_date)
-        count += 1
 
-
-        # Sleep for 30 seconds
-        sleep_interval(30)
+        # Sleep for 15 minutes (900 seconds)
+        sleep_interval(900)
 
         # Run the species net in divisions of 10
         if count % k_interval == 0:
@@ -53,6 +61,5 @@ def main():
             count = 0
 
 if __name__ == "__main__":
-    main()
-
+    main(method="image")
 

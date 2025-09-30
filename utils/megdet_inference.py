@@ -2,6 +2,7 @@
 Run the overhead scheme Megadetector + SAHI
 - PytorchWildlife --- MDV6-yolov9-e
 - SAHI (512,512) overlap 80%
+gdown --id 1TfVarxmQgcN5-nIemN9XNzyf44wNDw7N --folder -O RPi-cam/aerial-survey-data-kws --remaining-ok
 '''
 
 import os
@@ -26,13 +27,13 @@ def load_megdet(version="MDV6-yolov9-e", device='cuda'):
 # Configure the Autodetection model for an image
 def tiling_with_sahi(image_path,
                 model_type='ultralytics',
-                model_path="/root/.cache/torch/hub/checkpoints/MDV6-yolov9-e-1280.pt",
+                model_path="/home/conservacam/.cache/torch/hub/checkpoints/MDV6-yolov9-e-1280.pt",
                 confidence_threshold=0.5,
                 device="cuda:0",
                 slice_height = 512,
                 slice_width = 512,
-                overlap_height_ratio = 0.8,
-                overlap_width_ratio = 0.8
+                overlap_height_ratio = 0.7,
+                overlap_width_ratio = 0.7
         ):
     
 
@@ -55,7 +56,7 @@ def tiling_with_sahi(image_path,
 
     return result
 
-def visualize_predictions(image_path, result, save_dir="outputs"):
+def visualize_predictions(image_path, result, save_dir="outputs-aerial"):
     os.makedirs(save_dir, exist_ok=True)
 
     image = cv2.imread(image_path)
@@ -72,7 +73,7 @@ def visualize_predictions(image_path, result, save_dir="outputs"):
 
 
 # Save predictions in JSON format
-def save_predictions_json(image_path, result, save_dir="outputs"):
+def save_predictions_json(image_path, result, save_dir="outputs-aerial"):
     os.makedirs(save_dir, exist_ok=True)
 
     json_path = os.path.join(save_dir, Path(image_path).stem + "_detections.json")
@@ -84,13 +85,15 @@ def save_predictions_json(image_path, result, save_dir="outputs"):
 # Run pipeline on a folder of images
 def run_on_folder(
         folder_path="data/images",
-        save_dir="outputs",
+        save_dir="outputs-aerial",
         device="cpu"
 ):
     
 
     os.makedirs(save_dir, exist_ok=True)
-    image_files = [str(p) for p in Path(folder_path).glob("*.jpg")]
+    image_files = [str(p) for ext in ("*.jpg", "*.JPG", "*.png") for p in Path(folder_path).glob(ext)]
+    print(f"Processing {len(image_files)} images...")
+    print(folder_path)
 
     for img in image_files:
         print(f"Processing {img}...")
@@ -120,8 +123,8 @@ def run_on_folder_parallel(
         device="cpu"
 ):
     os.makedirs(save_dir, exist_ok=True)
-    image_files = [str(p) for p in Path(folder_path).glob("*.jpg")]
-
+    image_files = [str(p) for ext in ("*.jpg", "*.JPG", "*.png") for p in Path(folder_path).glob(ext)]
+    print(f"Found {len(image_files)} images in {folder_path}")
     # Use ~80% of cores
     num_workers = max(1, int(mp.cpu_count() * 0.8))
     print(f"Processing {len(image_files)} images with {num_workers} workers...")
@@ -139,7 +142,7 @@ def run_on_folder_parallel(
 if __name__ == '__main__':
     # Starting time
     start_time = time.time()
-    folder_path = "aerial_data/images"
+    folder_path = "/home/conservacam/Desktop/RPi-cam/RPi-cam/aerial-survey-data-kws/EWB Tsavo survey Left observer/L 02-25-2014"
     output_dir = "output_aerial_megdet_sahi"
 
     # Get the time now
@@ -148,20 +151,28 @@ if __name__ == '__main__':
     print("Current Time =", current_time)
     
     # get the megdet to get the path 
-    load_megdet()
+    # load_megdet()
 
-    # run tiling for one image
-    tiling_with_sahi('data/image.jpg')
+    # # run tiling for one image
+    # img_result = tiling_with_sahi('/home/conservacam/Desktop/RPi-cam/RPi-cam/aerial-survey-data-kws/EWB Tsavo survey Left observer/L 02-25-2014/IMG_8716.JPG')
 
-    # run tiling for a folder of images
+    # # Sve the predictions
+    # save_predictions_json('/home/conservacam/Desktop/RPi-cam/RPi-cam/aerial-survey-data-kws/EWB Tsavo survey Left observer/L 02-25-2014/IMG_8716.JPG', 
+    #                       img_result, 
+    #                       save_dir=f"{output_dir}/{current_time}")
+    # visualize_predictions('/home/conservacam/Desktop/RPi-cam/RPi-cam/aerial-survey-data-kws/EWB Tsavo survey Left observer/L 02-25-2014/IMG_8716.JPG',
+    #                         img_result, 
+    #                         save_dir=f"{output_dir}/{current_time}")
+
+    # # run tiling for a folder of images
     run_on_folder(folder_path=folder_path, 
                   save_dir=f"{output_dir}/{current_time}", 
-                  device="cuda:0")
+                  device="cpu")
     
     # parallel
-    run_on_folder_parallel(folder_path="data/images",
-                           save_dir=f"{output_dir}/{current_time}_parallel",
-                           device="cuda:0")
+    # run_on_folder_parallel(folder_path=folder_path,
+    #                        save_dir=f"{output_dir}/{current_time}_parallel",
+    #                        device="cpu")
     
     print(f"Finished in {time.time() - start_time:.2f} seconds")
 
